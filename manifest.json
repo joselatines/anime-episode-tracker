@@ -1,0 +1,27 @@
+{
+	"name": "Extension",
+	"version": "1",
+	"description": "Lit desc",
+	"manifest_version": 3,
+	"author": "Jose Latines",
+	"action": {
+		"default_popup": "index.html",
+		"default_title": "I a a default title"
+	},
+
+	"background": {
+		"scripts": ["background.js"],
+		"persistent": false
+	},
+
+	"content_scripts": [
+		{
+			"matches": [
+				"https://www3.animeflv.net/ver/*",
+				"https://9animetv.to/watch/*"
+			],
+			"js": ["content.js"]
+		}
+	],
+	"permissions": ["storage", "activeTab", "declarativeContent"]
+}

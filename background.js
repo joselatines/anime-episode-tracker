@@ -1,4 +1,1 @@
-alert("background");
-
-
-
+console.info("background");

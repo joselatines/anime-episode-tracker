@@ -1,5 +1,38 @@
 alert("background");
-const watchedStreamings = [];
+
+const KEY_WATCHED_STREAMINGS = "watchedStreamings";
+
+class DBManager {
+	watchedStreamings = [];
+
+	constructor() {
+		this.start();
+	}
+
+	start() {
+		chrome.storage.sync.get(KEY_WATCHED_STREAMINGS, storage => {
+			// checks if there is saved data if not assign an empty
+			this.watchedStreamings = storage.watchedStreamings || [];
+		});
+	}
+
+	getWatchedStreamings() {
+		return this.watchedStreamings;
+	}
+
+	orderWatchedStreamings() {
+		// unique episode
+		// by asc
+	}
+
+	addStreamingToWatched(streaming) {
+		// stores in the memory
+		this.watchedStreamings.push(streaming);
+		console.table(this.watchedStreamings);
+		// stores in the storage
+		saveInStorage(KEY_WATCHED_STREAMINGS, this.watchedStreamings);
+	}
+}
 
 class Streaming {
 	buildEpisode() {
@@ -60,7 +93,7 @@ class AnimeFLVStreaming extends Streaming {
 	}
 
 	scrapeImageUrl() {
-		const imageUrl = "no image";
+		const imageUrl = null;
 
 		return imageUrl;
 	}
@@ -77,9 +110,8 @@ class StreamingScrapper {
 	addStreamingToDB() {
 		const streamingClass = new this.StreamingClass();
 		const streaming = streamingClass.buildEpisode();
-		watchedStreamings.push(streaming);
 
-		alert(JSON.stringify(watchedStreamings));
+		database.addStreamingToWatched(streaming);
 	}
 }
 
@@ -115,5 +147,12 @@ class AnimeTVScrapper extends StreamingScrapper {
 	}
 }
 
+const database = new DBManager();
 new AnimeTVScrapper(AnimeTVStreaming);
 new AnimeFLVScrapper(AnimeFLVStreaming);
+
+const saveInStorage = (key, value) => {
+	chrome.storage.sync.set({ [key]: value }, () => {
+		console.log("Saved in storage", value);
+	});
+};

@@ -5,6 +5,7 @@ class UIBuilder {
 	constructor() {
 		this.mountStreamings();
 	}
+	
 	mountStreamings() {
 		chrome.storage.sync.get("watchedStreamings", storage => {
 			const watchedStreamings = storage.watchedStreamings || [];
@@ -17,7 +18,7 @@ class UIBuilder {
 				const image = document.createElement("img");
 
 				h2.textContent = streaming.title;
-				span.textContent = streaming.episode;
+				span.textContent = "Episode " + streaming.episode.toString();
 				image.setAttribute(
 					"src",
 					streaming.imageUrl ||

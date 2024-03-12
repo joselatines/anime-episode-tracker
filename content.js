@@ -21,16 +21,49 @@ class DBManager {
 	}
 
 	orderWatchedStreamings() {
-		// unique episode
-		// by asc
+		const orderedStreamings = this.watchedStreamings.sort(
+			(a, b) => a.episode - b.episode
+		);
+
+		return orderedStreamings;
+	}
+
+	deleteStreamingFromWatched(id) {
+		const watched = this.watchedStreamings();
+		const filteredStreamings = watched.filter(stream => stream.id !== id);
+
+		this.watchedStreamings = filteredStreamings;
+		saveInStorage(KEY_WATCHED_STREAMINGS, filteredStreamings);
+
+		console.table(filteredStreamings);
 	}
 
 	addStreamingToWatched(streaming) {
-		// stores in the memory
+		const alreadyInWatchedStreamings = this.watchedStreamings.find(
+			stream => stream.episode === streaming.episode
+		);
+
+		if (alreadyInWatchedStreamings) return console.info("Already in database");
+
+		// add streaming to watchedStreamings and order
 		this.watchedStreamings.push(streaming);
-		console.table(this.watchedStreamings);
-		// stores in the storage
-		saveInStorage(KEY_WATCHED_STREAMINGS, this.watchedStreamings);
+		const orderedStreamings = this.orderWatchedStreamings();
+
+		console.table(orderedStreamings);
+
+		// store ordered streamings in storage
+		saveInStorage(KEY_WATCHED_STREAMINGS, orderedStreamings);
+	}
+
+	clearStorage() {
+		chrome.storage.local.clear(function () {
+			var error = chrome.runtime.lastError;
+			if (error) {
+				console.error(error);
+			}
+
+			console.log("cleared!");
+		});
 	}
 }
 
@@ -39,8 +72,9 @@ class Streaming {
 		const episode = this.scrapeEpisode();
 		const title = this.scrapeTitle();
 		const imageUrl = this.scrapeImageUrl();
+		const id = Math.random().toString(16).slice(2);
 
-		return { title, episode, imageUrl };
+		return { title, episode, imageUrl, id };
 	}
 
 	scrapeTitle() {}
@@ -89,7 +123,12 @@ class AnimeFLVStreaming extends Streaming {
 	scrapeEpisode() {
 		const episode = document.querySelector(".SubTitle").textContent;
 
-		return episode;
+		// extract number
+		let episodeNumber = episode.match(/\d/g);
+		// join numbers into a string
+		episodeNumber = Number(episodeNumber.join(""));
+
+		return episodeNumber;
 	}
 
 	scrapeImageUrl() {

@@ -1,19 +1,18 @@
 {
-	"name": "Extension",
-	"version": "1",
-	"description": "Lit desc",
+	"name": "Anime Episode Tracker",
+	"version": "1.0",
+	"description": "An extension to save your progress and never forget which episode was the last one you watched. Track your anime journey effortlessly!",
 	"manifest_version": 3,
 	"author": "Jose Latines",
 	"action": {
 		"default_popup": "index.html",
-		"default_title": "I a a default title"
+		"default_title": "Anime Episode Tracker"
 	},
-
-	"background": {
-		"scripts": [""],
-		"persistent": false
+	"icons": {
+		"16": "/public/icon16.png",
+		"48": "/public/icon48.png",
+		"128": "/public/icon128.png"
 	},
-
 	"content_scripts": [
 		{
 			"matches": [

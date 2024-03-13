@@ -4,6 +4,7 @@ console.info("UI.js module initialization");
 class UIBuilder {
 	constructor() {
 		this.renderStreamings();
+		this.renderClearStorageButton();
 	}
 
 	renderStreamings() {
@@ -52,6 +53,31 @@ class UIBuilder {
 				container.appendChild(details);
 			}
 		});
+	}
+
+	clearStorage() {
+		return new Promise(resolve => {
+			chrome.storage.local.clear(() => {
+				const error = chrome.runtime.lastError;
+				if (error) {
+					console.error(error);
+				} else {
+					console.info("Storage cleared!");
+				}
+				resolve();
+				document.location.reload();
+			});
+			chrome.storage.sync.clear();
+		});
+	}
+
+	renderClearStorageButton() {
+		const container = document.querySelector("#footer");
+		const button = document.createElement("button");
+		button.textContent = "Clear all";
+		button.addEventListener("click", this.clearStorage);
+
+		container.appendChild(button);
 	}
 
 	convertSpacesToUnderscores(string = "") {

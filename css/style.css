@@ -25,7 +25,11 @@ details {
 	margin-bottom: 0.5rem;
 }
 
-footer {
+#footer {
 	margin-top: 5rem;
 	font-size: smaller;
+
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 }

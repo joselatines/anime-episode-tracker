@@ -10,8 +10,8 @@
 	},
 
 	"background": {
-		"scripts": ["background.js"],
-		"persistent": true
+		"scripts": ["js/background.js"],
+		"persistent": false
 	},
 
 	"content_scripts": [
@@ -20,7 +20,7 @@
 				"https://www3.animeflv.net/ver/*",
 				"https://9animetv.to/watch/*"
 			],
-			"js": ["content.js"]
+			"js": ["js/content.js"]
 		}
 	],
 	"permissions": ["storage", "activeTab", "declarativeContent"]

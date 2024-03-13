@@ -100,18 +100,22 @@ class Streaming {
 	}
 
 	scrapeTitle() {
+		throw new Error("method must be implemented in subclasses");
 		return "";
 	}
 
 	scrapeEpisode() {
+		throw new Error("method must be implemented in subclasses");
 		return 0;
 	}
 
 	scrapeImageUrl() {
+		throw new Error("method must be implemented in subclasses");
 		return "" || null;
 	}
 
 	scrapeUrl() {
+		throw new Error("method must be implemented in subclasses");
 		return "";
 	}
 }
@@ -181,7 +185,22 @@ class StreamingScrapper {
 		this.createButton();
 	}
 
-	async createButton() {}
+	async createButton() {
+		throw new Error("createButton method must be implemented in subclasses");
+	}
+
+	updateButtonUI(text = "Watch", background = "green", clickHandler) {
+		const button = document.querySelector("#status");
+		if (!button) return console.error("Button element not found in DOM");
+
+		button.textContent = text;
+		button.style.background = background;
+
+		button.removeEventListener("click", this.addStreamingToDB);
+		button.removeEventListener("click", this.deleteStreamingFromDB);
+		button.addEventListener("click", clickHandler);
+	}
+
 	async isMarkedAsWatched() {
 		const title = this.streamingElement.scrapeTitle();
 		const episode = this.streamingElement.scrapeEpisode();
@@ -202,36 +221,24 @@ class StreamingScrapper {
 		try {
 			const streaming = this.streamingElement.buildEpisode();
 			await this.database.addStreamingToWatched(streaming);
-
-			// re assign listener
-			const button = document.querySelector("#status");
-			button.textContent = "Unwatched!";
-			button.style.background = "red";
-			button.addEventListener(
-				"click",
-				async () => await this.deleteStreamingFromDB(streaming.id)
+			this.updateButtonUI(
+				"Unwatch",
+				"red",
+				this.deleteStreamingFromDB.bind(this, streaming.id)
 			);
 		} catch (error) {
-			alert("Error trying to save in database");
-			console.error(error);
+			console.error("Error trying to save in database", error);
+			throw error;
 		}
 	}
 
 	async deleteStreamingFromDB(id) {
 		try {
 			await this.database.deleteStreamingFromWatched(id);
-
-			// re assign listener
-			const button = document.querySelector("#status");
-			button.textContent = "Watched!";
-			button.style.background = "green";
-			button.addEventListener(
-				"click",
-				async () => await this.addStreamingToDB()
-			);
+			this.updateButtonUI("Watched", "green", this.addStreamingToDB.bind(this));
 		} catch (error) {
-			alert("Error trying to delete in database");
-			console.error(error);
+			console.error("Error trying to delete in database", error);
+			throw error;
 		}
 	}
 }
@@ -243,13 +250,20 @@ class AnimeFLVScrapper extends StreamingScrapper {
 
 		const button = document.createElement("button");
 		button.setAttribute("id", "status");
+		button.style.marginTop = "1rem";
 		const streamingAlreadyWatched = await this.isMarkedAsWatched();
 
-		button.textContent = "Watched!";
-		button.style.background = "green";
-		button.addEventListener("click", async () => await this.addStreamingToDB());
-
 		container.appendChild(button);
+
+		if (streamingAlreadyWatched) {
+			this.updateButtonUI(
+				"Unwatch",
+				"red",
+				this.deleteStreamingFromDB.bind(this, streamingAlreadyWatched.id)
+			);
+		} else {
+			this.updateButtonUI("Watched", "green", this.addStreamingToDB.bind(this));
+		}
 	}
 }
 

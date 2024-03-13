@@ -30,6 +30,7 @@ class UIBuilder {
 				div.appendChild(h2);
 				div.appendChild(span);
 				div.appendChild(image);
+				div.appendChild(a);
 
 				container.appendChild(div);
 			});

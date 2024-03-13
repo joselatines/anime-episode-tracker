@@ -57,7 +57,8 @@ class DBManager {
 	}
 
 	async deleteStreamingFromWatched(id) {
-		this.watchedStreamings = this.watchedStreamings.filter(
+		const watchedStreamings = await this.getWatchedStreamings();
+		this.watchedStreamings = watchedStreamings.filter(
 			stream => stream.id !== id
 		);
 		await this.saveWatchedStreamingsToStorage();
@@ -71,7 +72,9 @@ class DBManager {
 		);
 
 		if (alreadyInWatchedStreamings)
-			return console.info(`${streaming.id} already in database`);
+			return console.info(
+				`Episode ${streaming.episode} of ${streaming.title} already in database`
+			);
 
 		this.watchedStreamings.push(streaming);
 		const orderedStreamings = this.orderWatchedStreamings();
@@ -221,11 +224,8 @@ class StreamingScrapper {
 		try {
 			const streaming = this.streamingElement.buildEpisode();
 			await this.database.addStreamingToWatched(streaming);
-			this.updateButtonUI(
-				"Unwatch",
-				"red",
-				this.deleteStreamingFromDB.bind(this, streaming.id)
-			);
+
+			location.reload();
 		} catch (error) {
 			console.error("Error trying to save in database", error);
 			throw error;
@@ -235,7 +235,9 @@ class StreamingScrapper {
 	async deleteStreamingFromDB(id) {
 		try {
 			await this.database.deleteStreamingFromWatched(id);
-			this.updateButtonUI("Watched", "green", this.addStreamingToDB.bind(this));
+
+			// TODO: REFRESH COMPONENT INSTEAD OF RELOADING PAGE
+			location.reload();
 		} catch (error) {
 			console.error("Error trying to delete in database", error);
 			throw error;

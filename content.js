@@ -9,60 +9,82 @@ class DBManager {
 		this.start();
 	}
 
-	start() {
-		chrome.storage.sync.get(KEY_WATCHED_STREAMINGS, storage => {
-			// checks if there is saved data if not assign an empty
-			this.watchedStreamings = storage.watchedStreamings || [];
+	async start() {
+		// await this.clearStorage();
+		await this.getWatchedStreamingsFromStorage();
+	}
+
+	async getWatchedStreamingsFromStorage() {
+		return new Promise(resolve => {
+			chrome.storage.sync.get(KEY_WATCHED_STREAMINGS, storage => {
+				this.watchedStreamings = storage[KEY_WATCHED_STREAMINGS] || [];
+				resolve();
+			});
 		});
 	}
 
-	getWatchedStreamings() {
+	async clearStorage() {
+		return new Promise(resolve => {
+			chrome.storage.local.clear(() => {
+				const error = chrome.runtime.lastError;
+				if (error) {
+					console.error(error);
+				} else {
+					console.info("Storage cleared!");
+				}
+				resolve();
+			});
+			chrome.storage.sync.clear();
+		});
+	}
+
+	async getWatchedStreamings() {
+		await this.getWatchedStreamingsFromStorage(); // refresh memory variable with storage
 		return this.watchedStreamings;
 	}
 
 	orderWatchedStreamings() {
-		const orderedStreamings = this.watchedStreamings.sort(
-			(a, b) => a.episode - b.episode
-		);
+		// Order by title, then by episode number
+		const orderedStreamings = this.watchedStreamings.sort((a, b) => {
+			// Compare titles first
+			if (a.title !== b.title) return a.title.localeCompare(b.title);
+
+			// If titles are the same, compare episode numbers
+			return a.episode - b.episode;
+		});
 
 		return orderedStreamings;
 	}
 
-	deleteStreamingFromWatched(id) {
-		const watched = this.watchedStreamings();
-		const filteredStreamings = watched.filter(stream => stream.id !== id);
+	async deleteStreamingFromWatched(id) {
+		this.watchedStreamings = this.watchedStreamings.filter(
+			stream => stream.id !== id
+		);
+		await this.saveWatchedStreamingsToStorage();
 
-		this.watchedStreamings = filteredStreamings;
-		saveInStorage(KEY_WATCHED_STREAMINGS, filteredStreamings);
-
-		console.table(filteredStreamings);
+		console.table(this.watchedStreamings);
 	}
 
-	addStreamingToWatched(streaming) {
-		const alreadyInWatchedStreamings = this.watchedStreamings.find(
+	async addStreamingToWatched(streaming) {
+		const alreadyInWatchedStreamings = this.watchedStreamings.some(
 			stream => stream.episode === streaming.episode
 		);
 
 		if (alreadyInWatchedStreamings) return console.info("Already in database");
 
-		// add streaming to watchedStreamings and order
 		this.watchedStreamings.push(streaming);
 		const orderedStreamings = this.orderWatchedStreamings();
+		this.saveWatchedStreamingsToStorage(orderedStreamings);
 
 		console.table(orderedStreamings);
-
-		// store ordered streamings in storage
-		saveInStorage(KEY_WATCHED_STREAMINGS, orderedStreamings);
 	}
 
-	clearStorage() {
-		chrome.storage.local.clear(function () {
-			var error = chrome.runtime.lastError;
-			if (error) {
-				console.error(error);
-			}
-
-			console.log("cleared!");
+	async saveWatchedStreamingsToStorage(streamings = this.watchedStreamings) {
+		await new Promise(resolve => {
+			chrome.storage.sync.set({ [KEY_WATCHED_STREAMINGS]: streamings }, () => {
+				console.log("Saved watched streamings to storage", streamings);
+				resolve();
+			});
 		});
 	}
 }
@@ -73,15 +95,26 @@ class Streaming {
 		const title = this.scrapeTitle();
 		const imageUrl = this.scrapeImageUrl();
 		const id = Math.random().toString(16).slice(2);
+		const url = this.scrapeUrl();
 
-		return { title, episode, imageUrl, id };
+		return { title, episode, imageUrl, id, url };
 	}
 
-	scrapeTitle() {}
+	scrapeTitle() {
+		return "";
+	}
 
-	scrapeEpisode() {}
+	scrapeEpisode() {
+		return 0;
+	}
 
-	scrapeImageUrl() {}
+	scrapeImageUrl() {
+		return "" || null;
+	}
+
+	scrapeUrl() {
+		return "";
+	}
 }
 
 class AnimeTVStreaming extends Streaming {
@@ -98,7 +131,7 @@ class AnimeTVStreaming extends Streaming {
 			.querySelector(".item.ep-item.active")
 			.getAttribute("data-number");
 
-		return episode;
+		return Number(episode);
 	}
 
 	scrapeImageUrl() {
@@ -126,9 +159,9 @@ class AnimeFLVStreaming extends Streaming {
 		// extract number
 		let episodeNumber = episode.match(/\d/g);
 		// join numbers into a string
-		episodeNumber = Number(episodeNumber.join(""));
+		episodeNumber = episodeNumber.join("");
 
-		return episodeNumber;
+		return Number(episodeNumber);
 	}
 
 	scrapeImageUrl() {
@@ -136,46 +169,90 @@ class AnimeFLVStreaming extends Streaming {
 
 		return imageUrl;
 	}
+
+	scrapeUrl() {
+		return document.URL;
+	}
 }
 
 class StreamingScrapper {
-	constructor(StreamingClass) {
-		this.StreamingClass = StreamingClass;
-		this.createWatchedButton();
+	constructor(streamingElement, database) {
+		this.streamingElement = streamingElement;
+		this.database = database;
+		this.createButton();
 	}
 
-	createWatchedButton() {}
+	async createButton() {}
+	async isMarkedAsWatched() {
+		const title = this.streamingElement.scrapeTitle();
+		const episode = this.streamingElement.scrapeEpisode();
 
-	addStreamingToDB() {
-		const streamingClass = new this.StreamingClass();
-		const streaming = streamingClass.buildEpisode();
+		try {
+			const watchedStreamings = await this.database.getWatchedStreamings();
+			const streamingFound = watchedStreamings.find(
+				stream => stream.title === title && stream.episode === episode
+			);
 
-		database.addStreamingToWatched(streaming);
+			return streamingFound;
+		} catch (error) {
+			alert("Error trying to get database");
+			console.error(error);
+		}
+	}
+	async addStreamingToDB() {
+		try {
+			const streaming = this.streamingElement.buildEpisode();
+			await this.database.addStreamingToWatched(streaming);
+		} catch (error) {
+			alert("Error trying to save in database");
+			console.error(error);
+		}
+	}
+
+	async deleteStreamingFromDB(id) {
+		try {
+			await this.database.deleteStreamingFromWatched(id);
+		} catch (error) {
+			alert("Error trying to delete in database");
+			console.error(error);
+		}
 	}
 }
 
 class AnimeFLVScrapper extends StreamingScrapper {
-	constructor(StreamingClass) {
-		super(StreamingClass);
-	}
-
-	createWatchedButton() {
+	async createButton() {
 		const container = document.querySelector(".CpCnA");
 		if (!container) return console.error("Container not found in the DOM");
 
 		const button = document.createElement("button");
-		button.textContent = "Watched!";
-		button.addEventListener("click", this.addStreamingToDB.bind(this));
+		const streamingAlreadyWatched = await this.isMarkedAsWatched();
+
+		if (streamingAlreadyWatched) {
+			button.textContent = "Unwatched!";
+			button.style.background = "red";
+			button.addEventListener(
+				"click",
+				async () => await this.deleteStreamingFromDB(streamingAlreadyWatched.id)
+			);
+		} else {
+			button.textContent = "Watched!";
+			button.style.background = "green";
+			button.addEventListener(
+				"click",
+				async () => await this.addStreamingToDB()
+			);
+		}
+
 		container.appendChild(button);
 	}
 }
 
 class AnimeTVScrapper extends StreamingScrapper {
-	constructor(StreamingClass) {
-		super(StreamingClass);
+	constructor(streamingElement) {
+		super(streamingElement);
 	}
 
-	createWatchedButton() {
+	createButton() {
 		const container = document.querySelector(".ps_-status");
 		if (!container) return console.error("Container not found in the DOM");
 
@@ -187,11 +264,4 @@ class AnimeTVScrapper extends StreamingScrapper {
 }
 
 const database = new DBManager();
-new AnimeTVScrapper(AnimeTVStreaming);
-new AnimeFLVScrapper(AnimeFLVStreaming);
-
-const saveInStorage = (key, value) => {
-	chrome.storage.sync.set({ [key]: value }, () => {
-		console.log("Saved in storage", value);
-	});
-};
+new AnimeFLVScrapper(new AnimeFLVStreaming(), database);

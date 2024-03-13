@@ -10,7 +10,6 @@ class DBManager {
 	}
 
 	async start() {
-		// await this.clearStorage();
 		await this.getWatchedStreamingsFromStorage();
 	}
 

@@ -1,6 +1,31 @@
-button.watch {
-	background-color: green;
+body {
+	width: max-content;
+	padding: 1rem 1.5rem;
+	font-size: large;
+	font-family: "Roboto", sans-serif;
 }
-button.unWatch {
-	background-color: red;
+
+#streamings details {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3rem;
+
+	justify-content: center;
+	align-items: center;
+}
+
+summary {
+	cursor: pointer;
+	margin-bottom: 0.3rem;
+}
+
+details {
+	padding: 1rem;
+	background-color: #f8f9fa;
+	margin-bottom: 0.5rem;
+}
+
+footer {
+	margin-top: 5rem;
+	font-size: smaller;
 }

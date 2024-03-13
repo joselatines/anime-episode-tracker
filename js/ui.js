@@ -1,43 +1,62 @@
-console.info("ui.js");
+// Log info message
+console.info("UI.js module initialization");
 
 class UIBuilder {
 	constructor() {
-		this.mountStreamings();
+		this.renderStreamings();
 	}
 
-	mountStreamings() {
-		chrome.storage.sync.get("watchedStreamings", storage => {
-			const watchedStreamings = storage.watchedStreamings || [];
+	renderStreamings() {
+		// fetch watchedStreamings from Chrome storage
+		chrome.storage.sync.get("watchedStreamings", data => {
+			const watchedStreamings = data.watchedStreamings;
 			const container = document.querySelector("#streamings");
 
+			if (!watchedStreamings || watchedStreamings.length === 0)
+				return (container.textContent = "No animes added");
+
+			// create a hash table to group watchedStreamings by title
+			const streamingGroups = {};
+
+			// group watchedStreamings by title
 			watchedStreamings.forEach(streaming => {
-				const div = document.createElement("div");
-				const h2 = document.createElement("h2");
-				const span = document.createElement("span");
-				const image = document.createElement("img");
-				const a = document.createElement("a");
+				const titleKey = this.convertSpacesToUnderscores(streaming.title);
 
-				h2.textContent = streaming.title;
-				span.textContent = "Episode " + streaming.episode.toString();
-				image.setAttribute(
-					"src",
-					streaming.imageUrl ||
-						"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRtjx5nRnRUiIM-RtBAaIXxC8obxkAbwuSxug&usqp=CAU"
-				);
-				a.textContent = "Watch here";
-				a.setAttribute("href", streaming.url);
-
-				div.appendChild(h2);
-				div.appendChild(span);
-				div.appendChild(image);
-				div.appendChild(a);
-
-				container.appendChild(div);
+				if (streamingGroups.hasOwnProperty(titleKey)) {
+					streamingGroups[titleKey].push(streaming);
+				} else {
+					streamingGroups[titleKey] = [streaming];
+				}
 			});
+
+			// render streaming groups
+			for (const key in streamingGroups) {
+				const streamings = streamingGroups[key];
+				const details = document.createElement("details");
+				const summary = document.createElement("summary");
+				summary.textContent = streamings[0].title; // for example: One Piece
+
+				// render episodes for each streaming group
+				streamings.forEach(streaming => {
+					const episodeLink = document.createElement("a");
+					episodeLink.textContent = `Episode ${streaming.episode}`;
+					episodeLink.setAttribute("href", streaming.url);
+					episodeLink.setAttribute("target", "_blank");
+					episodeLink.setAttribute("rel", "noopener noreferrer");
+					episodeLink.className = "streamingEpisode";
+
+					details.appendChild(episodeLink);
+				});
+
+				details.appendChild(summary);
+				container.appendChild(details);
+			}
 		});
 	}
 
-	orderStreamings() {}
+	convertSpacesToUnderscores(string = "") {
+		return string.replaceAll(" ", "_").toLowerCase();
+	}
 }
 
 new UIBuilder();

@@ -62,7 +62,7 @@ class DBManager {
 		);
 		await this.saveWatchedStreamingsToStorage();
 
-		console.table(this.watchedStreamings);
+		console.info(`Streaming ${id} deleted`);
 	}
 
 	async addStreamingToWatched(streaming) {
@@ -70,19 +70,18 @@ class DBManager {
 			stream => stream.episode === streaming.episode
 		);
 
-		if (alreadyInWatchedStreamings) return console.info("Already in database");
+		if (alreadyInWatchedStreamings)
+			return console.info(`${streaming.id} already in database`);
 
 		this.watchedStreamings.push(streaming);
 		const orderedStreamings = this.orderWatchedStreamings();
 		this.saveWatchedStreamingsToStorage(orderedStreamings);
-
-		console.table(orderedStreamings);
 	}
 
 	async saveWatchedStreamingsToStorage(streamings = this.watchedStreamings) {
 		await new Promise(resolve => {
 			chrome.storage.sync.set({ [KEY_WATCHED_STREAMINGS]: streamings }, () => {
-				console.log("Saved watched streamings to storage", streamings);
+				console.info("Saved watched streamings to storage", streamings);
 				resolve();
 			});
 		});
@@ -203,6 +202,15 @@ class StreamingScrapper {
 		try {
 			const streaming = this.streamingElement.buildEpisode();
 			await this.database.addStreamingToWatched(streaming);
+
+			// re assign listener
+			const button = document.querySelector("#status");
+			button.textContent = "Unwatched!";
+			button.style.background = "red";
+			button.addEventListener(
+				"click",
+				async () => await this.deleteStreamingFromDB(streaming.id)
+			);
 		} catch (error) {
 			alert("Error trying to save in database");
 			console.error(error);
@@ -212,6 +220,15 @@ class StreamingScrapper {
 	async deleteStreamingFromDB(id) {
 		try {
 			await this.database.deleteStreamingFromWatched(id);
+
+			// re assign listener
+			const button = document.querySelector("#status");
+			button.textContent = "Watched!";
+			button.style.background = "green";
+			button.addEventListener(
+				"click",
+				async () => await this.addStreamingToDB()
+			);
 		} catch (error) {
 			alert("Error trying to delete in database");
 			console.error(error);
@@ -225,23 +242,12 @@ class AnimeFLVScrapper extends StreamingScrapper {
 		if (!container) return console.error("Container not found in the DOM");
 
 		const button = document.createElement("button");
+		button.setAttribute("id", "status");
 		const streamingAlreadyWatched = await this.isMarkedAsWatched();
 
-		if (streamingAlreadyWatched) {
-			button.textContent = "Unwatched!";
-			button.style.background = "red";
-			button.addEventListener(
-				"click",
-				async () => await this.deleteStreamingFromDB(streamingAlreadyWatched.id)
-			);
-		} else {
-			button.textContent = "Watched!";
-			button.style.background = "green";
-			button.addEventListener(
-				"click",
-				async () => await this.addStreamingToDB()
-			);
-		}
+		button.textContent = "Watched!";
+		button.style.background = "green";
+		button.addEventListener("click", async () => await this.addStreamingToDB());
 
 		container.appendChild(button);
 	}

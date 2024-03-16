@@ -40,7 +40,7 @@ I created this extension because I always forget which episode I last watched!
 1. **Installation:**
    - Download and install the extension from the Chrome Web Store or download this repository and upload it thro extension in developer mode (the whole folder)
 2. **Navigating to Anime Streaming Websites:**
-   - Visit your preferred anime streaming website, such as AnimeFLV or AnimeTV.
+   - Visit your preferred anime streaming website, such as [AnimeFLV](https://www3.animeflv.net)  
 3. **Marking Episodes as Watched:**
    - While watching an episode, click the "Watched" button provided by the extension.
    - The episode will be marked as watched, and your progress will be saved.
